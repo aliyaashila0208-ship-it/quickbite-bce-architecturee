@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickBite - POS System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background: linear-gradient(135deg, #1e1e2f 0%, #2d2b42 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .card { background: #ffffff; width: 100%; max-width: 480px; padding: 32px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+        .header { text-align: center; margin-bottom: 24px; }
+        .header h2 { color: #ff5722; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+        .header p { color: #6c757d; font-size: 13px; margin-top: 4px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; font-size: 13px; color: #343a40; margin-bottom: 6px; }
+        input, select { width: 100%; padding: 12px 14px; border: 1.5px solid #e9ecef; border-radius: 8px; font-size: 14px; color: #495057; background-color: #f8f9fa; transition: all 0.2s ease; outline: none; }
+        input:focus, select:focus { border-color: #ff5722; background-color: #fff; box-shadow: 0 0 0 3px rgba(255,87,34,0.15); }
+        .btn-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #ff5722 0%, #e64a19 100%); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.2s ease; margin-top: 10px; }
+        .btn-submit:hover { box-shadow: 0 6px 20px rgba(255,87,34,0.4); transform: translateY(-1px); }
+        .btn-submit:active { transform: translateY(0); }
+        #result { margin-top: 20px; padding: 16px; border-radius: 10px; display: none; font-size: 13.5px; line-height: 1.6; }
+        .success { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .error { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .result-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; display: block; border-bottom: 1px dashed currentColor; padding-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <h2>🍔 QuickBite</h2>
+        <p>Sistem Kasir &amp; Checkout Pesanan</p>
+    </div>
+
+    <form id="checkoutForm">
+        <div class="form-group">
+            <label for="idPelanggan">ID Pelanggan</label>
+            <input type="text" id="idPelanggan" value="CUST-001" required>
+        </div>
+
+        <div class="form-group">
+            <label for="idMenu">Pilih Menu</label>
+            <select id="idMenu">
+                <option value="MENU-01">Nasi Goreng Spesial — Rp 25.000 (Stok: 10)</option>
+                <option value="MENU-02">Es Teh Manis — Rp 5.000 (Stok: 20)</option>
+                <option value="MENU-03">Roti Bakar Coklat — Rp 15.000 (Stok: 3)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="jumlah">Jumlah Porsi</label>
+            <input type="number" id="jumlah" value="2" min="1" required>
+        </div>
+
+        <div class="form-group">
+            <label for="tokenPembayaran">Metode / Status Pembayaran</label>
+            <select id="tokenPembayaran">
+                <option value="valid_token_123">Kartu Valid (Pembayaran Sukses)</option>
+                <option value="invalid_card">Kartu Ditolak (Pembayaran Gagal)</option>
+            </select>
+        </div>
+
+        <button type="button" class="btn-submit" onclick="kirimCheckout()">Proses Checkout Sekarang</button>
+    </form>
+
+    <div id="result"></div>
+</div>
+
+<script>
+async function kirimCheckout() {
+    const payload = {
+        idPelanggan: document.getElementById('idPelanggan').value,
+        tokenPembayaran: document.getElementById('tokenPembayaran').value,
+        items: [
+            {
+                idMenu: document.getElementById('idMenu').value,
+                jumlah: parseInt(document.getElementById('jumlah').value)
+            }
+        ]
+    };
+
+    const resBox = document.getElementById('result');
+    resBox.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        resBox.style.display = 'block';
+
+        if (response.ok) {
+            resBox.className = 'success';
+            resBox.innerHTML = `
+                <span class="result-title">✅ Transaksi Berhasil!</span>
+                <b>ID Pesanan:</b> ${data.idPesanan}<br>
+                <b>Status Pesanan:</b> ${data.statusPesanan}<br>
+                <b>Total Biaya:</b> Rp ${data.totalBiaya.toLocaleString('id-ID')}<br>
+                <b>Status Bayar:</b> ${data.statusPembayaran}<br>
+                <b>Kode Ref:</b> ${data.kodeReferensi}
+            `;
+        } else {
+            resBox.className = 'error';
+            resBox.innerHTML = `
+                <span class="result-title">❌ Transaksi Gagal</span>
+                <b>Pesan Error:</b> ${data.message}
+            `;
+        }
+    } catch (err) {
+        resBox.style.display = 'block';
+        resBox.className = 'error';
+        resBox.innerHTML = `<span class="result-title">⚠️ System Error</span>Gagal terhubung ke server Spring Boot.`;
+    }
+}
+</script>
+
+</body>
+</html>
